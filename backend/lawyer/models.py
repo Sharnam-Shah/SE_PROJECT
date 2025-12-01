@@ -62,16 +62,14 @@ class LawyerConnectionRequest(Document):
         default='pending',
         choices=('pending', 'accepted', 'declined', 'withdrawn'),
     )
-    preferred_contact_method = StringField(max_length=32, default='email')
-    preferred_contact_value = StringField(max_length=255, default='')
     preferred_time = DateTimeField(required=False, null=True)
-    meeting_link = StringField(max_length=512, default='')
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
 
     meta = {
         'collection': 'lawyer_connection_requests',
         'db_alias': 'default',
+        'strict': False,
         'indexes': [
             {'fields': ['client', 'lawyer', 'status']},
             'lawyer',

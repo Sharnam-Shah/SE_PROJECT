@@ -24,7 +24,7 @@ const LawyerConnect = () => {
   const fetchLawyers = async (pageNum = 1) => {
     try {
       setLoading(true);
-      const response = await axios.get(`api/lawyer/?page=${pageNum}`);
+      const response = await axios.get(`api/lawyer/?page=${pageNum}&page_size=4`);
       // Handle both old array format (fallback) and new paginated format
       const data = response.data;
       const newLawyers = Array.isArray(data) ? data : (data.results || []);

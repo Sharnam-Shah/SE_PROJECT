@@ -165,7 +165,18 @@ const AdminDashboard = () => {
                     {lawyer.user?.email}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Status: <span className="uppercase">{lawyer.verification_status}</span>
+                    Status:{" "}
+                    <span
+                      className={`uppercase font-bold ${
+                        lawyer.verification_status === "approved"
+                          ? "text-green-500"
+                          : lawyer.verification_status === "rejected"
+                          ? "text-red-500"
+                          : "text-orange-500"
+                      }`}
+                    >
+                      {lawyer.verification_status}
+                    </span>
                   </p>
                   {lawyer.specializations && lawyer.specializations.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -174,17 +185,40 @@ const AdminDashboard = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
+                  {lawyer.verification_status === "pending" ? (
+                    <>
+                      <Button
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleVerifyLawyer(lawyer.user?.id, "approved")}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleVerifyLawyer(lawyer.user?.id, "rejected")}
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  ) : (
+                    <span
+                      className={`px-3 py-2 rounded-md text-sm font-semibold ${
+                        lawyer.verification_status === "approved"
+                          ? "bg-green-500/20 text-green-600"
+                          : lawyer.verification_status === "rejected"
+                          ? "bg-red-500/20 text-red-600"
+                          : "text-muted-foreground" // Fallback for other statuses
+                      }`}
+                    >
+                      {lawyer.verification_status.toUpperCase()}
+                    </span>
+                  )}
                   <Button
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => handleVerifyLawyer(lawyer.user?.id, "approved")}
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteLawyer(lawyer.user?.id)}
                   >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleVerifyLawyer(lawyer.user?.id, "rejected")}
-                  >
-                    Reject
+                    Delete
                   </Button>
                 </div>
               </div>

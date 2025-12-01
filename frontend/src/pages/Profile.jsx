@@ -219,7 +219,7 @@ const Profile = () => {
             {isEditing && (
               <label 
                 htmlFor="cover-photo-upload" 
-                className="absolute bottom-4 right-4 p-2.5 bg-input/70 rounded-xl cursor-pointer hover:bg-input transition-all duration-200 flex items-center gap-2 text-foreground text-sm font-medium z-10"
+                className="absolute bottom-4 right-4 p-1.5 bg-input/70 rounded-lg cursor-pointer hover:bg-input transition-all duration-200 flex items-center gap-2 text-foreground text-sm font-medium z-10"
               >
                 <Camera className="w-4 h-4" />
                 Change Cover
@@ -258,7 +258,7 @@ const Profile = () => {
                 {isEditing && (
                   <label 
                     htmlFor="profile-picture-upload" 
-                    className="absolute bottom-2 right-2 p-2.5 bg-gradient-to-br from-primary to-secondary rounded-xl cursor-pointer hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 group"
+                    className="absolute bottom-2 right-2 p-1.5 bg-gradient-to-br from-primary to-secondary rounded-lg cursor-pointer hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 group"
                   >
                     <Camera className="w-4 h-4" />
                     Change Profile

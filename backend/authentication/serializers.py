@@ -264,7 +264,7 @@ class RegisterSerializer(serializers.Serializer):
         role = validated_data.pop("role", "client")
         phone = validated_data.pop("phone", "")
         license_number = validated_data.pop("license_number", "")
-        bar_council_id = validated_data.pop("bar_council_id", "")
+        bar_council_id = validated_data.pop("bar_council_id", "") # Explicitly pop
         education = validated_data.pop("education", "")
         experience_years = validated_data.pop("experience_years", 0)
         law_firm = validated_data.pop("law_firm", "")
@@ -384,7 +384,6 @@ class LawyerProfileSerializer(serializers.Serializer):
         child=serializers.CharField(), required=False, allow_empty=True
     )
     license_number = serializers.CharField(required=True)
-    bar_council_id = serializers.CharField(required=True)
     consultation_fee = serializers.CharField(required=False, allow_blank=True)
     bio = serializers.CharField(required=False, allow_blank=True)
     verification_documents = serializers.ListField(
@@ -401,7 +400,6 @@ class LawyerProfileSerializer(serializers.Serializer):
         instance.law_firm = validated_data.get("law_firm", instance.law_firm)
         instance.specializations = validated_data.get("specializations", instance.specializations)
         instance.license_number = validated_data.get("license_number", instance.license_number)
-        instance.bar_council_id = validated_data.get("bar_council_id", instance.bar_council_id)
         instance.consultation_fee = validated_data.get("consultation_fee", instance.consultation_fee)
         instance.bio = validated_data.get("bio", instance.bio)
         instance.verification_documents = validated_data.get("verification_documents", instance.verification_documents)
@@ -416,16 +414,28 @@ class LawyerProfileSerializer(serializers.Serializer):
     def create(self, validated_data):
         """Create new lawyer profile"""
         user = validated_data.pop('user')
+        # Remove bar_council_id if it's empty, as it's no longer required by the model
+        bar_council_id = validated_data.pop('bar_council_id', '').strip()
+        if not bar_council_id:
+            bar_council_id = "" # Ensure it's an empty string if not provided
+             
         if LawyerProfile.objects(user=user).first():
              raise serializers.ValidationError("Profile already exists for this user.")
              
-        profile = LawyerProfile(user=user, **validated_data)
+        profile = LawyerProfile(user=user, bar_council_id=bar_council_id, **validated_data)
         profile.verification_status = 'pending'
         profile.save()
         return profile
 
     def to_representation(self, instance):
-        user_data = UserSerializer(instance.user).data if instance.user else None
+        user_data = None
+        try:
+            if instance.user:
+                user_data = UserSerializer(instance.user).data
+        except DoesNotExist:
+            # Handle cases where the referenced user does not exist
+            pass
+            
         return {
             "id": str(instance.id),
             "user": user_data,
@@ -435,7 +445,6 @@ class LawyerProfileSerializer(serializers.Serializer):
             "law_firm": instance.law_firm,
             "specializations": instance.specializations,
             "license_number": instance.license_number,
-            "bar_council_id": instance.bar_council_id,
             "consultation_fee": instance.consultation_fee,
             "bio": instance.bio,
             "verification_status": instance.verification_status,
@@ -452,10 +461,7 @@ class LawyerConnectionRequestSerializer(serializers.Serializer):
     lawyer = UserSerializer(read_only=True)
     message = serializers.CharField(required=False, allow_blank=True)
     status = serializers.CharField(read_only=True)
-    preferred_contact_method = serializers.CharField(required=False, allow_blank=True)
-    preferred_contact_value = serializers.CharField(required=False, allow_blank=True)
     preferred_time = serializers.DateTimeField(required=False, allow_null=True)
-    meeting_link = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
@@ -466,12 +472,9 @@ class LawyerConnectionRequestSerializer(serializers.Serializer):
             "lawyer": UserSerializer(instance.lawyer).data if instance.lawyer else None,
             "message": instance.message,
             "status": instance.status,
-            "preferred_contact_method": instance.preferred_contact_method,
-            "preferred_contact_value": instance.preferred_contact_value,
             "preferred_time": (
                 instance.preferred_time.isoformat() if instance.preferred_time else None
             ),
-            "meeting_link": instance.meeting_link,
             "created_at": (
                 instance.created_at.isoformat() if instance.created_at else None
             ),

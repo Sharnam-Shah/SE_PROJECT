@@ -16,6 +16,59 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/Components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/Components/ui/Select";
+
+const STATE_CODES = [
+  { value: 'AP', label: 'Andhra Pradesh' },
+  { value: 'AS', label: 'Assam' },
+  { value: 'AR', label: 'Arunachal Pradesh' },
+  { value: 'BR', label: 'Bihar' },
+  { value: 'DL', label: 'Delhi' },
+  { value: 'GJ', label: 'Gujarat' },
+  { value: 'GA', label: 'Goa' },
+  { value: 'HP', label: 'Himachal Pradesh' },
+  { value: 'HR', label: 'Haryana' },
+  { value: 'JH', label: 'Jharkhand' },
+  { value: 'JK', label: 'Jammu & Kashmir' },
+  { value: 'LA', label: 'Ladakh' },
+  { value: 'KA', label: 'Karnataka' },
+  { value: 'KL', label: 'Kerala' },
+  { value: 'MP', label: 'Madhya Pradesh' },
+  { value: 'MH', label: 'Maharashtra' },
+  { value: 'MN', label: 'Manipur' },
+  { value: 'ML', label: 'Meghalaya' },
+  { value: 'NL', label: 'Nagaland' },
+  { value: 'MZ', label: 'Mizoram' },
+  { value: 'OR', label: 'Odisha' },
+  { value: 'PB', label: 'Punjab' },
+  { value: 'PY', label: 'Puducherry' },
+  { value: 'RJ', label: 'Rajasthan' },
+  { value: 'SK', label: 'Sikkim' },
+  { value: 'TN', label: 'Tamil Nadu' },
+  { value: 'TS', label: 'Telangana' },
+  { value: 'TR', label: 'Tripura' },
+  { value: 'UP', label: 'Uttar Pradesh' },
+  { value: 'UK', label: 'Uttarakhand' },
+  { value: 'WB', label: 'West Bengal' }
+];
+
+const DEGREE_OPTIONS = [
+  { value: 'LLB', label: 'LLB (3-year)' },
+  { value: 'BA LLB', label: 'BA LLB' },
+  { value: 'BSc LLB', label: 'BSc LLB' },
+  { value: 'BCom LLB', label: 'BCom LLB' },
+  { value: 'BBA LLB', label: 'BBA LLB' },
+  { value: 'LLM', label: 'LLM' },
+  { value: 'PhD in Law', label: 'PhD in Law' },
+  { value: 'MBL', label: 'Master of Business Law (MBL)' },
+  { value: 'Other', label: 'Other' }
+];
 
 const Signup = () => {
 const navigate = useNavigate();
@@ -29,7 +82,6 @@ const { setUser, setIsAuthenticated } = useAuth();
     password2: '',
     phone: '',
     license_number: '',
-    bar_council_id: '',
     education: '',
     experience_years: '',
     law_firm: '',
@@ -38,13 +90,43 @@ const { setUser, setIsAuthenticated } = useAuth();
     bio: '',
     verification_documents: ''
   });
+  
+  // Separate state for Enrollment Number parts
+  const [enrollmentDetails, setEnrollmentDetails] = useState({
+    state: '',
+    serial: '',
+    year: ''
+  });
+  const [otherDegree, setOtherDegree] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [isLawyerModalOpen, setIsLawyerModalOpen] = useState(false); // New state for modal
-  const [isGoogleOnboarding, setIsGoogleOnboarding] = useState(false); // New state for Google lawyer onboarding
-  const [googleAccessToken, setGoogleAccessToken] = useState(null); // To store token for subsequent calls
+  const [isLawyerModalOpen, setIsLawyerModalOpen] = useState(false); 
+  const [isGoogleOnboarding, setIsGoogleOnboarding] = useState(false); 
+  const [googleAccessToken, setGoogleAccessToken] = useState(null); 
 
-  const validateForm = (isLawyerStep = false) => { // Modified to accept isLawyerStep
+  // Sync license_number when enrollment details change
+  React.useEffect(() => {
+    if (accountType === 'lawyer') {
+      const { state, serial, year } = enrollmentDetails;
+      setFormData(prev => ({
+        ...prev,
+        license_number: `${state}/${serial}/${year}`
+      }));
+    }
+  }, [enrollmentDetails, accountType]);
+
+  const handleEnrollmentChange = (field, value) => {
+    setEnrollmentDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (errors.license_number) {
+      setErrors(prev => ({ ...prev, license_number: '' }));
+    }
+  };
+
+  const validateForm = (isLawyerStep = false) => {
     const newErrors = {};
 
     // Name validation (always required)
@@ -120,22 +202,50 @@ const { setUser, setIsAuthenticated } = useAuth();
 
     // Lawyer-specific validation, only if isLawyerStep is true
     if (accountType === 'lawyer' && isLawyerStep) {
-      if (!formData.license_number.trim()) {
-        newErrors.license_number = 'License Number is required for lawyers';
-      } else if (/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/`~]/.test(formData.license_number)) {
-        newErrors.license_number = 'License Number cannot contain special characters';
+      // Enrollment Number Validation
+      if (!enrollmentDetails.state) {
+        newErrors.license_number = 'State code is required';
+      } else if (!enrollmentDetails.serial) {
+        newErrors.license_number = 'Serial number is required';
+      } else if (!enrollmentDetails.year) {
+        newErrors.license_number = 'Year is required';
+      } else {
+        const serial = Number(enrollmentDetails.serial);
+        const year = Number(enrollmentDetails.year);
+        const currentYear = new Date().getFullYear();
+
+        if (isNaN(serial) || serial < 1 || serial > 100000) {
+          newErrors.license_number = 'Serial number must be between 1 and 100000';
+        } else if (isNaN(year) || year < 1961 || year > currentYear) {
+          newErrors.license_number = `Year must be between 1961 and ${currentYear}`;
+        }
       }
       
-      if (!formData.bar_council_id.trim()) {
-        newErrors.bar_council_id = 'Bar Council ID is required for lawyers';
-      } else if (/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/`~]/.test(formData.bar_council_id)) {
-        newErrors.bar_council_id = 'Bar Council ID cannot contain special characters';
-      }
-
       if (!formData.education.trim()) {
         newErrors.education = 'Education is required for lawyers';
-      } else if (!/^[a-zA-Z\s,.-]+$/.test(formData.education.trim())) {
-        newErrors.education = 'Education can only contain letters, spaces, commas, periods, and hyphens';
+      } else if (formData.education === 'Other') {
+        if (!otherDegree.trim()) {
+            newErrors.otherDegree = 'Please specify your degree';
+        } else if (/[0-9]/.test(otherDegree)) { // Check for numbers
+            newErrors.otherDegree = 'Degree name cannot contain numbers';
+        } else if (!/^[a-zA-Z\s.,&+-]+$/.test(otherDegree.trim())) { // Broader allowed characters
+            newErrors.otherDegree = 'Degree name contains invalid characters';
+        }
+      }
+
+      if (formData.consultation_fee) {
+        if (!/^\d+$/.test(formData.consultation_fee.toString())) {
+          newErrors.consultation_fee = 'Consultation fee must be a number (in Rupees)';
+        } else if (Number(formData.consultation_fee) < 0) {
+          newErrors.consultation_fee = 'Consultation fee cannot be negative';
+        }
+      }
+
+      if (formData.specializations) {
+        // Check if any digit exists in the string
+        if (/\d/.test(formData.specializations)) {
+          newErrors.specializations = 'Specializations should only contain text, not numbers';
+        }
       }
 
       if (formData.law_firm && formData.law_firm.trim()) {
@@ -167,7 +277,22 @@ const { setUser, setIsAuthenticated } = useAuth();
       ...formData,
       [name]: processedValue
     });
+    
     // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
+    }
+  };
+
+  const handleSelectChange = (name, value) => {
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+    
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -198,6 +323,12 @@ const { setUser, setIsAuthenticated } = useAuth();
       
       if (accountType === 'lawyer') {
         payload.experience_years = formData.experience_years ? Number(formData.experience_years) : 0;
+        
+        // Use custom degree if 'Other' is selected
+        if (payload.education === 'Other') {
+          payload.education = otherDegree.trim();
+        }
+
         payload.specializations = formData.specializations
           ? formData.specializations.split(',').map(item => item.trim()).filter(Boolean)
           : [];
@@ -207,7 +338,6 @@ const { setUser, setIsAuthenticated } = useAuth();
       } else {
         [
           'license_number',
-          'bar_council_id',
           'education',
           'experience_years',
           'law_firm',
@@ -601,61 +731,87 @@ const { setUser, setIsAuthenticated } = useAuth();
               </p>
             </div>
 
+                        <div className="space-y-2">
+                                            <Label className="text-foreground font-medium">Enrollment Number *</Label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                              <Select 
+                                                name="enrollment_state" 
+                                                value={enrollmentDetails.state} 
+                                                onValueChange={(val) => handleEnrollmentChange('state', val)}
+                                              >
+                                                <SelectTrigger className="bg-input border-border/50">
+                                                  <SelectValue placeholder="State" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                                                                      {STATE_CODES.map((state) => (
+                                                                        <SelectItem key={state.value} value={state.value}>
+                                                                          {state.label}
+                                                                        </SelectItem>
+                                                                      ))}
+                                                                    </SelectContent>                                              </Select>
+                                              
+                                              <Input
+                                                name="enrollment_serial"
+                                                placeholder="Serial (1-100000)"
+                                                type="number"
+                                                min="1"
+                                                max="100000"
+                                                value={enrollmentDetails.serial}
+                                                onChange={(e) => handleEnrollmentChange('serial', e.target.value)}
+                                                className="bg-input border-border/50"
+                                              />
+                                              
+                                              <Input
+                                                name="enrollment_year"
+                                                placeholder="Year (1961+)"
+                                                type="number"
+                                                min="1961"
+                                                value={enrollmentDetails.year}
+                                                onChange={(e) => handleEnrollmentChange('year', e.target.value)}
+                                                className="bg-input border-border/50"
+                                              />
+                                            </div>                            {errors.license_number && (
+                              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-1">
+                                <p className="text-xs text-red-600 dark:text-red-400">{errors.license_number}</p>
+                              </div>
+                            )}
+                          </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="license_number" className="text-foreground font-medium">License Number *</Label>
-                <Input
-                  id="license_number"
-                  name="license_number"
-                  placeholder="State Bar License Number"
-                  required
-                  value={formData.license_number}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  className={`bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300 ${errors.license_number ? 'border-red-500' : ''}`}
-                />
-                {errors.license_number && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-1">
-                    <p className="text-xs text-red-600 dark:text-red-400">{errors.license_number}</p>
-                  </div>
+                <Label htmlFor="education" className="text-foreground font-medium">Education (Degree) *</Label>
+                <Select 
+                  name="education" 
+                  value={formData.education} 
+                  onValueChange={(val) => handleSelectChange('education', val)}
+                >
+                  <SelectTrigger className={`bg-input border-border/50 ${errors.education ? 'border-red-500' : ''}`}>
+                    <SelectValue placeholder="Select Degree" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEGREE_OPTIONS.map((degree) => (
+                      <SelectItem key={degree.value} value={degree.value}>
+                        {degree.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.education === 'Other' && (
+                  <Input
+                    placeholder="Specify Degree"
+                    value={otherDegree}
+                    onChange={(e) => setOtherDegree(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Prevent numbers (0-9) from being typed
+                      if (/[0-9]/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className={`mt-2 bg-input border-border/50 ${errors.otherDegree ? 'border-red-500' : ''}`}
+                  />
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bar_council_id" className="text-foreground font-medium">Bar Council ID *</Label>
-                <Input
-                  id="bar_council_id"
-                  name="bar_council_id"
-                  placeholder="Bar Council Registration ID"
-                  required
-                  value={formData.bar_council_id}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  className={`bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300 ${errors.bar_council_id ? 'border-red-500' : ''}`}
-                />
-                {errors.bar_council_id && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-800 rounded-lg p-2 mt-1">
-                    <p className="text-xs text-red-600 dark:text-red-400">{errors.bar_council_id}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="education" className="text-foreground font-medium">Education *</Label>
-                <Input
-                  id="education"
-                  name="education"
-                  placeholder="LLB, LLM..."
-                  required
-                  value={formData.education}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  className={`bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300 ${errors.education ? 'border-red-500' : ''}`}
-                />
-                {errors.education && (
+                {(errors.education || errors.otherDegree) && (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-1">
-                    <p className="text-xs text-red-600 dark:text-red-400">{errors.education}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400">{errors.education || errors.otherDegree}</p>
                   </div>
                 )}
               </div>
@@ -694,16 +850,26 @@ const { setUser, setIsAuthenticated } = useAuth();
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="consultation_fee" className="text-foreground font-medium">Consultation Fee</Label>
-                <Input
-                  id="consultation_fee"
-                  name="consultation_fee"
-                  placeholder="e.g. ₹1500/hour"
-                  value={formData.consultation_fee}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  className="bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300"
-                />
+                <Label htmlFor="consultation_fee" className="text-foreground font-medium">Consultation Fee (₹)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                  <Input
+                    id="consultation_fee"
+                    name="consultation_fee"
+                    type="number"
+                    min="0"
+                    placeholder="1500"
+                    value={formData.consultation_fee}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                    className={`pl-8 bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300 ${errors.consultation_fee ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                {errors.consultation_fee && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-1">
+                    <p className="text-xs text-red-600 dark:text-red-400">{errors.consultation_fee}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -716,8 +882,13 @@ const { setUser, setIsAuthenticated } = useAuth();
                 value={formData.specializations}
                 onChange={handleInputChange}
                 disabled={loading}
-                className="bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300"
+                className={`bg-input border-border/50 text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 transition-all duration-300 ${errors.specializations ? 'border-red-500' : ''}`}
               />
+              {errors.specializations && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 mt-1">
+                  <p className="text-xs text-red-600 dark:text-red-400">{errors.specializations}</p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

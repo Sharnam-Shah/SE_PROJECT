@@ -38,11 +38,11 @@ const LawyerProfile = () => {
     setIsModalOpen(true);
   };
 
-  const handleConnect = async ({ message, preferredContact, preferredTime }) => {
+  const handleConnect = async ({ message, preferredTime }) => {
     if (!profileData?.user?.id) return;
 
-    if (!message || !preferredContact || !preferredTime) {
-      toast.error('Please fill out all fields.');
+    if (!preferredTime) { // message is now optional
+      toast.error('Please provide a preferred time.');
       return;
     }
 
@@ -59,8 +59,6 @@ const LawyerProfile = () => {
     try {
       const response = await axios.post(`api/lawyer/${profileData.user.id}/connect/`, {
         message: message || "",
-        preferred_contact_method: preferredContact?.includes("@") ? "email" : "phone",
-        preferred_contact_value: preferredContact || user?.email || "",
         preferred_time: preferredTimeIso,
       });
       if (response.data.message) {

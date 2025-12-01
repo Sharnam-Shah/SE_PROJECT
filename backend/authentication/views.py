@@ -880,19 +880,42 @@ def lawyer_profile_completion_view(request):
             user.lawyer_verification_status = 'pending'
             user.save()
 
-            # Generate and return full JWT tokens
-            tokens = get_tokens_for_user(user)
-            user_data = UserSerializer(user).data
+            # OTP for email users, skip for Google users as email is already verified
+            if user.auth_provider != 'google':
+                try:
+                    otp_sent = create_and_send_otp(user)
+                    if not otp_sent:
+                        raise Exception("Failed to send OTP for email verification.")
+                except Exception as otp_e:
+                    print(f"Error sending OTP after lawyer profile completion: {otp_e}")
+                    return Response(
+                        {"error": "Failed to send verification email. Please try again."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
 
-            return Response(
-                {
-                    "message": "Lawyer profile submitted successfully for verification.",
-                    "user": user_data,
-                    "tokens": tokens,
-                    "redirect": "home",
-                },
-                status=status.HTTP_200_OK,
-            )
+                # Response for email users who need OTP verification
+                return Response(
+                    {
+                        "message": "Lawyer profile submitted successfully for verification. OTP sent to your email.",
+                        "email": user.email, # Provide email for OTP verification page
+                        "requires_verification": True,
+                        "redirect": "verify-otp",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                # For Google users, no OTP needed. Directly log them in.
+                tokens = get_tokens_for_user(user)
+                user_data = UserSerializer(user).data
+                return Response(
+                    {
+                        "message": "Lawyer profile submitted successfully for verification (Google user).",
+                        "user": user_data,
+                        "tokens": tokens,
+                        "redirect": "home",
+                    },
+                    status=status.HTTP_200_OK,
+                )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
@@ -957,17 +980,37 @@ def admin_lawyer_list_view(request):
     status_filter = request.query_params.get("status", "").strip()
 
     try:
+        # Debugging step: Count profiles by status
+        status_counts = {}
+        for profile in LawyerProfile.objects().only('verification_status'):
+            profile_status = profile.verification_status if profile.verification_status else "unknown"
+            status_counts[profile_status] = status_counts.get(profile_status, 0) + 1
+        print(f"DEBUG: LawyerProfile Status Counts in DB: {status_counts}")
+
         if status_filter in ("pending", "approved", "rejected"):
-            profiles = LawyerProfile.objects(verification_status=status_filter)
+            all_profiles = LawyerProfile.objects(verification_status=status_filter)
         else:
-            profiles = LawyerProfile.objects()
+            all_profiles = LawyerProfile.objects()
+            
+        valid_profiles = []
+        for profile in all_profiles:
+            try:
+                # Accessing profile.user will trigger dereference and raise DoesNotExist if user is missing
+                if profile.user:
+                    valid_profiles.append(profile)
+            except DoesNotExist:
+                # Optionally log this, or delete the orphaned profile
+                print(f"Warning: Orphaned LawyerProfile found and skipped: {profile.id}")
+                # profile.delete() # Uncomment to permanently remove orphaned profiles
+                continue
+
     except Exception as e:
         return Response(
             {"error": "Failed to load lawyer profiles.", "details": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    serializer = LawyerProfileSerializer(profiles, many=True)
+    serializer = LawyerProfileSerializer(valid_profiles, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -1085,3 +1128,37 @@ def admin_create_admin_user_view(request):
         },
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def admin_delete_lawyer_view(request, lawyer_id):
+    """Allows an admin to delete a lawyer user and their associated profile."""
+    access_denied = _require_admin(request.user)
+    if access_denied is not None:
+        return access_denied
+
+    try:
+        # First, find the User associated with the lawyer_id
+        lawyer_user = User.objects(id=lawyer_id, role="lawyer").first()
+        if not lawyer_user:
+            return Response({"error": "Lawyer user not found."}, status=status.HTTP_404_NOT_NOT_FOUND)
+
+        # Delete the associated LawyerProfile
+        LawyerProfile.objects(user=lawyer_user).delete()
+        
+        # Then delete the User itself
+        lawyer_user.delete()
+
+        return Response(
+            {"message": "Lawyer and their profile deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+    except DoesNotExist:
+        return Response({"error": "Lawyer not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        traceback.print_exc()
+        return Response(
+            {"error": f"Failed to delete lawyer: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+

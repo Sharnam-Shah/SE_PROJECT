@@ -28,10 +28,7 @@ class LawyerConnectionRequestSerializer(serializers.Serializer):
     lawyer = UserSerializer(read_only=True)
     message = serializers.CharField(required=False, allow_blank=True)
     status = serializers.CharField(read_only=True)
-    preferred_contact_method = serializers.CharField(required=False, allow_blank=True)
-    preferred_contact_value = serializers.CharField(required=False, allow_blank=True)
     preferred_time = serializers.DateTimeField(required=False, allow_null=True)
-    meeting_link = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 

@@ -14,7 +14,6 @@ import { Textarea } from '@/Components/ui/textarea';
 
 const ConnectModal = ({ isOpen, onOpenChange, lawyer, onConnect }) => {
   const [message, setMessage] = useState('');
-  const [preferredContact, setPreferredContact] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
   const [error, setError] = useState('');
 
@@ -39,7 +38,6 @@ const ConnectModal = ({ isOpen, onOpenChange, lawyer, onConnect }) => {
     
     onConnect({
       message,
-      preferredContact,
       preferredTime,
     });
   };
@@ -64,18 +62,6 @@ const ConnectModal = ({ isOpen, onOpenChange, lawyer, onConnect }) => {
               onChange={(e) => setMessage(e.target.value)}
               className="col-span-3"
               placeholder="A short note for the lawyer (optional)"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="contact" className="text-right">
-              Contact
-            </Label>
-            <Input
-              id="contact"
-              value={preferredContact}
-              onChange={(e) => setPreferredContact(e.target.value)}
-              className="col-span-3"
-              placeholder="Your email or phone"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

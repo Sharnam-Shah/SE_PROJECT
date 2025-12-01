@@ -108,10 +108,13 @@ def chat_messages_view(request, conversation_id):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     elif request.method == 'POST':
+        print(f"DEBUG: chat_messages_view received request.data: {request.data}")
         message_text = request.data.get('message', '').strip()
         message_type = request.data.get('message_type', 'text')
         document_id = request.data.get('document_id', '')
         document_title = request.data.get('document_title', '')
+        
+        print(f"DEBUG: message_type: {message_type}, document_id: {document_id}, document_title: {document_title}")
         
         if not message_text and message_type != 'document':
             return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)

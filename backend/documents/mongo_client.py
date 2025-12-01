@@ -35,7 +35,8 @@ def get_all_conversations(user=None):
         # Convert ObjectId to string for JSON serialization and get latest document
         result = []
         for conv in conversations:
-            conv['_id'] = str(conv['_id'])
+            conv['id'] = str(conv['_id']) # Map _id to id
+            del conv['_id'] # Remove _id to avoid confusion
             if 'created_at' in conv:
                 conv['created_at'] = conv['created_at'].isoformat()
             if 'document_versions' in conv and conv['document_versions']:
@@ -56,7 +57,8 @@ def get_conversation_by_id(conversation_id):
     try:
         conversation = conversations_collection.find_one({'_id': ObjectId(conversation_id)})
         if conversation:
-            conversation['_id'] = str(conversation['_id'])
+            conversation['id'] = str(conversation['_id']) # Map _id to id
+            del conversation['_id'] # Remove _id to avoid confusion
             # Convert datetime objects to ISO 8601 strings
             if 'created_at' in conversation:
                 conversation['created_at'] = conversation['created_at'].isoformat()

@@ -381,6 +381,38 @@ const DocumentCreation = () => {
     setTempTitle('');
   };
 
+  const handleDocumentSharedToChat = ({ documentId, documentTitle, shareUrl, sharedWithUser, permissionLevel }) => {
+    if (!mongoConversationId) {
+        toast.error('Document not saved. Cannot send chat message.');
+        return;
+    }
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      toast.error('Chat connection not available. Document shared, but chat message could not be sent.');
+      return;
+    }
+
+    let messageText = '';
+    if (shareUrl) {
+      messageText = `Shared document "${documentTitle}" publicly: ${shareUrl}`;
+    } else if (sharedWithUser) {
+      messageText = `Shared document "${documentTitle}" with ${sharedWithUser} (${permissionLevel} access).`;
+    } else {
+      messageText = `Shared document "${documentTitle}".`;
+    }
+
+    const chatPayload = {
+      type: 'chat_message',
+      message: messageText,
+      message_type: 'document', // Indicate it's a document share message
+      document_id: documentId,
+      document_title: documentTitle,
+    };
+
+    ws.current.send(JSON.stringify(chatPayload));
+    setMessages((prev) => [...prev, { sender: 'user', text: messageText, message_type: 'document', document_id: documentId, document_title: documentTitle }]);
+    toast.success('Document shared and message sent to chat!');
+  };
+
   // Render creation UI when no conversation ID yet
   if (!mongoConversationId) {
     return (
@@ -736,7 +768,13 @@ const DocumentCreation = () => {
 
       {/* Modals */}
       {isShareModalOpen && (
-        <ShareModal documentId={mongoConversationId} documentTitle={title} onClose={() => setIsShareModalOpen(false)} initialSharedWithUsers={documentSharedWithUsers} />
+        <ShareModal
+          documentId={mongoConversationId}
+          documentTitle={title}
+          onClose={() => setIsShareModalOpen(false)}
+          initialSharedWithUsers={documentSharedWithUsers}
+          onDocumentShared={handleDocumentSharedToChat}
+        />
       )}
       {isSignatureModalOpen && (
         <SignatureModal

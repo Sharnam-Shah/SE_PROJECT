@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import axios from '../api/axios';
 import toast from 'react-hot-toast';
 
-const ShareModal = ({ documentId, documentTitle, onClose, initialSharedWithUsers = [] }) => {
+const ShareModal = ({ documentId, documentTitle, onClose, initialSharedWithUsers = [], onDocumentShared }) => {
   const [publicPermissionLevel, setPublicPermissionLevel] = useState('view');
   const [shareUrl, setShareUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,6 +71,9 @@ const ShareModal = ({ documentId, documentTitle, onClose, initialSharedWithUsers
       const url = `${window.location.origin}${response.data.share_url}`;
       setShareUrl(url);
       toast.success('Public share link generated!');
+      if (onDocumentShared) {
+        onDocumentShared({ documentId, documentTitle, shareUrl: url });
+      }
     } catch (err) {
       console.error('Error generating share link:', err);
       toast.error('Failed to generate public share link.');
@@ -96,6 +99,9 @@ const ShareModal = ({ documentId, documentTitle, onClose, initialSharedWithUsers
         permission_level: userPermissionLevel,
       });
       toast.success(`Document shared with ${usernameToShare}!`);
+      if (onDocumentShared) {
+        onDocumentShared({ documentId, documentTitle, sharedWithUser: usernameToShare, permissionLevel: userPermissionLevel });
+      }
       setUsernameToShare('');
       setShowUserDropdown(false);
       const response = await axios.get(`api/documents/conversations/${documentId}/`);

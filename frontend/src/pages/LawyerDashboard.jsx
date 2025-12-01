@@ -198,19 +198,6 @@ const LawyerDashboard = () => {
                     Preferred time: {formatDateTime(connection.preferred_time)}
                   </p>
                 )}
-                {connection.meeting_link && (
-                  <p className="text-sm text-primary mt-1">
-                    Google Meet:{" "}
-                    <a
-                      href={connection.meeting_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:text-primary/80"
-                    >
-                      {connection.meeting_link}
-                    </a>
-                  </p>
-                )}
                 {connection.message && (
                   <p className="text-sm text-foreground mt-2 whitespace-pre-wrap">
                     “{connection.message}”

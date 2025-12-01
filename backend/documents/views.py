@@ -203,6 +203,8 @@ def generate_share_link(request):
             else:
                 return Response({'error': 'Failed to update share permissions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': f'Error generating share link: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         # Create new document
@@ -224,6 +226,8 @@ def generate_share_link(request):
             share_url = f"/documentShare/{conversation_id}"
             return Response({'share_url': share_url}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': f'Error generating share link: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -406,6 +410,8 @@ def share_document_with_user(request, pk):
         else:
             return Response({'error': 'Failed to update share permissions.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error in share_document_with_user: {e}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

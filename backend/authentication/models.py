@@ -137,7 +137,7 @@ class LawyerProfile(Document):
     law_firm = StringField(max_length=255, default='')
     specializations = ListField(StringField(max_length=120), default=list)
     license_number = StringField(max_length=120, required=True)
-    bar_council_id = StringField(max_length=120, required=True)
+    bar_council_id = StringField(max_length=120, required=False, default='')
     consultation_fee = StringField(max_length=120, default='')
     bio = StringField(default='')
     verification_documents = ListField(StringField(max_length=512), default=list)
@@ -176,16 +176,14 @@ class LawyerConnectionRequest(Document):
         default='pending',
         choices=('pending', 'accepted', 'declined'),
     )
-    preferred_contact_method = StringField(max_length=32, default='email')
-    preferred_contact_value = StringField(max_length=255, default='')
     preferred_time = DateTimeField(required=False, null=True)
-    meeting_link = StringField(max_length=512, default='')
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
 
     meta = {
         'collection': 'lawyer_connection_requests',
         'db_alias': 'default',
+        'strict': False,
         'indexes': [
             {'fields': ['client', 'lawyer', 'status']},
             'lawyer',

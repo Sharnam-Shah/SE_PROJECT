@@ -16,6 +16,7 @@ from .views import (
     admin_lawyer_verify_view,
     admin_promote_user_view,
     admin_create_admin_user_view,
+    admin_delete_lawyer_view,
     search_users_view,
     lawyer_profile_completion_view,
 )
@@ -46,5 +47,10 @@ urlpatterns = [
         "admin/users/create-admin/",
         admin_create_admin_user_view,
         name="admin_create_admin_user",
+    ),
+    path(
+        "admin/lawyers/<str:lawyer_id>/delete/",
+        admin_delete_lawyer_view,
+        name="admin_lawyer_delete",
     ),
 ]

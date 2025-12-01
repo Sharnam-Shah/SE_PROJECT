@@ -23,9 +23,16 @@ from authentication.serializers import UserSerializer
 @permission_classes([AllowAny])
 def lawyer_list_view(request):
     """List approved lawyers with optional specialization filter and pagination"""
+    # Self-healing: Remove broken profiles
+    for p in LawyerProfile.objects():
+        try:
+            p.user
+        except DoesNotExist:
+            p.delete()
+
     specialization = request.query_params.get('specialization', '').strip()
     page = int(request.query_params.get('page', 1))
-    page_size = int(request.query_params.get('page_size', 10))
+    page_size = int(request.query_params.get('page_size', 4))
 
     profiles = LawyerProfile.objects(verification_status='approved')
     
@@ -36,7 +43,17 @@ def lawyer_list_view(request):
     skip = (page - 1) * page_size
     profiles = profiles.skip(skip).limit(page_size)
     
-    serializer = LawyerProfileSerializer(profiles, many=True)
+    valid_profiles = []
+    for profile in profiles:
+        try:
+            # Check if the referenced user exists; this triggers the DB lookup
+            if profile.user:
+                valid_profiles.append(profile)
+        except DoesNotExist:
+            # Skip profiles with missing User references
+            continue
+
+    serializer = LawyerProfileSerializer(valid_profiles, many=True)
     return Response({
         'results': serializer.data,
         'has_more': (skip + page_size) < total_count,
@@ -94,10 +111,7 @@ def connect_with_lawyer_view(request, lawyer_id):
         }, status=status.HTTP_200_OK)
 
     message = request.data.get('message', '').strip()
-    preferred_method = request.data.get('preferred_contact_method', 'email')
-    preferred_value = request.data.get('preferred_contact_value', request.user.email)
     preferred_time_str = request.data.get('preferred_time')
-    meeting_link = request.data.get('meeting_link')
 
     preferred_time = None
     if preferred_time_str:
@@ -106,24 +120,19 @@ def connect_with_lawyer_view(request, lawyer_id):
         except ValueError:
             return Response({'error': 'Invalid preferred time format. Use ISO 8601 format.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not meeting_link:
-        meeting_link = f"https://meet.google.com/new?hs=224&authuser=0&advocai={uuid4().hex[:8]}"
-
     connection_request = LawyerConnectionRequest.objects.create(
         client=request.user,
         lawyer=lawyer,
         message=message,
-        preferred_contact_method=preferred_method,
-        preferred_contact_value=preferred_value,
+        preferred_contact_method='email', # Default to email
+        preferred_contact_value=request.user.email, # Use client's email
         preferred_time=preferred_time,
-        meeting_link=meeting_link,
     )
 
     serializer = LawyerConnectionRequestSerializer(connection_request)
     return Response({
         'message': 'Connection request submitted successfully.',
         'request': serializer.data,
-        'meeting_link': meeting_link,
     }, status=status.HTTP_201_CREATED)
 
 

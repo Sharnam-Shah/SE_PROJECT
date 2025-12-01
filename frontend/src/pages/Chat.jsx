@@ -75,6 +75,7 @@ const Chat = () => {
   const loadUserDocuments = async () => {
     try {
       const response = await axios.get('api/documents/conversations/');
+      console.log('DEBUG (Chat.jsx): Documents loaded:', response.data);
       setAvailableDocuments(response.data || []);
     } catch (err) {
       console.error('Failed to load documents:', err);
@@ -107,6 +108,7 @@ const Chat = () => {
 
   const shareDocument = async (documentId, documentTitle) => {
     setSending(true);
+    console.log('DEBUG (Chat.jsx): Attempting to share document with ID:', documentId, 'Title:', documentTitle);
     try {
       await axios.post(`api/chat/conversations/${conversationId}/messages/`, {
         message: `Shared document: ${documentTitle}`,
